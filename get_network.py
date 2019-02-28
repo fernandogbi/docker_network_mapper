@@ -3,25 +3,31 @@ import docker
 import ipaddress
 import sys
 
-print(__name__)
+def findNextNetwork():
+    client = docker.from_env()
 
+    networks = client.networks.list()
 
-client = docker.from_env()
+    higher_subnet = u"0.0.0.0"
 
-networks = client.networks.list()
+    for network in networks:
+        attrs = network.attrs
+        config = attrs["IPAM"]["Config"]
+        
+        if len(config) == 0:
+            continue
+        
+        subnet = config[0]["Subnet"]
+        
+        if ipaddress.ip_network(subnet) > ipaddress.ip_network(higher_subnet):
+            higher_subnet = subnet
 
-higher_subnet = "0.0.0.0"
+    new_network = str(ipaddress.IPv4Network(higher_subnet).broadcast_address + 1)
 
-for network in networks:
-    attrs = network.attrs
-    config = attrs["IPAM"]["Config"]
-    
-    if len(config) == 0:
-        continue
-    
-    subnet = config[0]["Subnet"]
-    
-    if ipaddress.ip_network(subnet) > ipaddress.ip_network(higher_subnet):
-        higher_subnet = subnet
+    if ipaddress.IPv4Network(unicode(new_network)).is_private:
+        print(new_network+"/29")
+    else:
+        print(False)
 
-print("a rede mais alte e a: " + higher_subnet + " e sera criada agora a rede: " + str(ipaddress.IPv4Network(higher_subnet).broadcast_address + 1) + "/29")
+if __name__ == '__main__':
+    findNextNetwork()
