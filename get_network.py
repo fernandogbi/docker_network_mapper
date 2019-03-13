@@ -1,14 +1,14 @@
 
 import docker
-import ipaddress
+import ipaddress as ipaddr
 import sys
+import random
 
 def findNextNetwork():
     client = docker.from_env()
 
     networks = client.networks.list()
-
-    higher_subnet = u"0.0.0.0"
+    subnets = []
 
     for network in networks:
         attrs = network.attrs
@@ -17,17 +17,24 @@ def findNextNetwork():
         if len(config) == 0:
             continue
         
-        subnet = config[0]["Subnet"]
-        
-        if ipaddress.ip_network(subnet) > ipaddress.ip_network(higher_subnet):
-            higher_subnet = subnet
+        subnets.append(ipaddr.ip_network(config[0]["Subnet"]))
 
-    new_network = str(ipaddress.IPv4Network(higher_subnet).broadcast_address + 1)
+    for index in range(0,len(subnets)):
+        new_network = str(subnets[index].broadcast_address + 1)+"/29"
+        if checkOverlaps(subnets, new_network):
+            print(new_network+" is available")
+            #os.system("docker network create --subnet "+new_network+" teste"+str(random.getrandbits(128)))
+            sys.exit(0)
+    print("not subnets available in private range IP")
 
-    if ipaddress.IPv4Network(unicode(new_network)).is_private:
-        print(new_network+"/29")
-    else:
-        print(False)
+def checkOverlaps(subnets, new_network):
+    for subnet in subnets:
+        if subnet.overlaps(ipaddr.IPv4Network(unicode(new_network))) == True:
+            return False
+        elif ipaddr.IPv4Network(unicode(new_network)).is_private == False:
+            return False
+
+    return True
 
 if __name__ == '__main__':
     findNextNetwork()
