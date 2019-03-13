@@ -2,7 +2,6 @@
 import docker
 import ipaddress as ipaddr
 import sys
-import random
 
 def findNextNetwork():
     client = docker.from_env()
@@ -23,8 +22,8 @@ def findNextNetwork():
         new_network = str(subnets[index].broadcast_address + 1)+"/29"
         if checkOverlaps(subnets, new_network):
             print(new_network+" is available")
-            #os.system("docker network create --subnet "+new_network+" teste"+str(random.getrandbits(128)))
             sys.exit(0)
+            
     print("not subnets available in private range IP")
 
 def checkOverlaps(subnets, new_network):
